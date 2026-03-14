@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-win/
+Stormbird-Data/
+*.log
+.env
+.env.local
+build-assets/generated/
+Stormbird-error.log
+.DS_Store
+Thumbs.db

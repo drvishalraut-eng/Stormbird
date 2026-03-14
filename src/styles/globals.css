@@ -1,0 +1,171 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   globals.css — Stormbird design tokens
+   Both themes defined as CSS custom properties.
+   Theme is applied by setting data-theme="dark" or data-theme="light" on <html>.
+───────────────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Dark theme (default) ──────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-app        : #000000;
+  --bg-sidebar    : #0a0a0a;
+  --bg-list       : #0f0f0f;
+  --bg-pane       : #000000;
+  --bg-selected   : #1a1500;
+  --bg-hover      : #111111;
+  --bg-input      : #0d0d0d;
+  --bg-toolbar    : #080808;
+  --bg-tag        : #1f1200;
+  --bg-unread     : #0d0900;
+  --bg-console    : #050505;
+  --bg-modal      : #0d0d0d;
+
+  --border        : #2a2a2a;
+  --border-strong : #3a3a3a;
+  --border-accent : #f59e0b;
+
+  --text-primary  : #ffffff;
+  --text-second   : #a0a0a0;
+  --text-muted    : #555555;
+  --text-accent   : #f59e0b;
+  --text-unread   : #ffffff;
+
+  --accent        : #f59e0b;
+  --accent-hover  : #fbbf24;
+  --accent-dim    : rgba(245, 158, 11, 0.15);
+
+  --green         : #4ade80;
+  --red           : #f87171;
+  --blue          : #60a5fa;
+  --amber         : #f59e0b;
+  --purple        : #c084fc;
+  --cyan          : #22d3ee;
+
+  --titlebar-bg   : #050505;
+  --titlebar-border: #1a1a1a;
+
+  /* Console category colors */
+  --cat-boot      : #666666;
+  --cat-db        : #60a5fa;
+  --cat-imap      : #22d3ee;
+  --cat-mbox      : #c084fc;
+  --cat-write     : #4ade80;
+  --cat-send      : #4ade80;
+  --cat-backup    : #f59e0b;
+  --cat-check     : #c084fc;
+  --cat-drive     : #22d3ee;
+  --cat-manager   : #f59e0b;
+  --cat-claude    : #c084fc;
+  --cat-warn      : #fbbf24;
+  --cat-error     : #f87171;
+  --cat-info      : #a0a0a0;
+}
+
+/* ── Light / Classic Windows 10 theme ────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-app        : #f3f3f3;
+  --bg-sidebar    : #e8e8e8;
+  --bg-list       : #ffffff;
+  --bg-pane       : #ffffff;
+  --bg-selected   : #cce4f7;
+  --bg-hover      : #e5e5e5;
+  --bg-input      : #ffffff;
+  --bg-toolbar    : #f3f3f3;
+  --bg-tag        : #fff3cd;
+  --bg-unread     : #f0f7ff;
+  --bg-console    : #1e1e1e;
+  --bg-modal      : #ffffff;
+
+  --border        : #c0c0c0;
+  --border-strong : #999999;
+  --border-accent : #0078d4;
+
+  --text-primary  : #000000;
+  --text-second   : #444444;
+  --text-muted    : #888888;
+  --text-accent   : #0078d4;
+  --text-unread   : #000000;
+
+  --accent        : #0078d4;
+  --accent-hover  : #106ebe;
+  --accent-dim    : rgba(0, 120, 212, 0.1);
+
+  --green         : #107c10;
+  --red           : #c42b1c;
+  --blue          : #0078d4;
+  --amber         : #ca5010;
+  --purple        : #8764b8;
+  --cyan          : #0099bc;
+
+  --titlebar-bg   : #e0e0e0;
+  --titlebar-border: #c0c0c0;
+
+  /* Console always stays dark — easier to read logs */
+  --cat-boot      : #888888;
+  --cat-db        : #60a5fa;
+  --cat-imap      : #22d3ee;
+  --cat-mbox      : #c084fc;
+  --cat-write     : #4ade80;
+  --cat-send      : #4ade80;
+  --cat-backup    : #f59e0b;
+  --cat-check     : #c084fc;
+  --cat-drive     : #22d3ee;
+  --cat-manager   : #f59e0b;
+  --cat-claude    : #c084fc;
+  --cat-warn      : #fbbf24;
+  --cat-error     : #f87171;
+  --cat-info      : #aaaaaa;
+}
+
+/* ── Base styles ─────────────────────────────────────────────────────────── */
+
+body {
+  font-family : 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size   : 13px;
+  background  : var(--bg-app);
+  color       : var(--text-primary);
+  line-height : 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  font-size  : inherit;
+  cursor     : pointer;
+  border     : none;
+  background : none;
+  color      : inherit;
+}
+
+input, textarea {
+  font-family: inherit;
+  font-size  : inherit;
+}
+
+/* ── Scrollbars ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar          { width: 6px; height: 6px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--border-strong); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Utility classes ──────────────────────────────────────────────────────── */
+.ellipsis {
+  overflow     : hidden;
+  text-overflow: ellipsis;
+  white-space  : nowrap;
+}
+
+.monospace {
+  font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  font-size  : 12px;
+}

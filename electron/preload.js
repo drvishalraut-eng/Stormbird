@@ -1,0 +1,165 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// preload.js — Exposes safe IPC bridge to the React renderer
+// All renderer ↔ main communication goes through window.sb
+// ─────────────────────────────────────────────────────────────────────────────
+
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('sb', {
+
+  // ── Window controls ──────────────────────────────────────────────────────
+  win: {
+    minimize : () => ipcRenderer.invoke('win:minimize'),
+    maximize : () => ipcRenderer.invoke('win:maximize'),
+    close    : () => ipcRenderer.invoke('win:close'),
+    isMaximized: () => ipcRenderer.invoke('win:isMaximized'),
+  },
+
+  // ── Logger / Console ─────────────────────────────────────────────────────
+  logger: {
+    getRecent : (n)         => ipcRenderer.invoke('logger:getRecent', n),
+    onLine    : (callback)  => {
+      ipcRenderer.on('logger:line', (_, entry) => callback(entry));
+      return () => ipcRenderer.removeAllListeners('logger:line');
+    },
+  },
+
+  // ── Process Manager ──────────────────────────────────────────────────────
+  processes: {
+    getAll    : ()          => ipcRenderer.invoke('process:getAll'),
+    diagnose  : (issueId)   => ipcRenderer.invoke('process:diagnose', issueId),
+    resolve   : (issueId)   => ipcRenderer.invoke('process:resolve', issueId),
+    retry     : (name)      => ipcRenderer.invoke('process:retry', name),
+    onUpdate  : (callback)  => {
+      ipcRenderer.on('process:update', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('process:update');
+    },
+    onIssue   : (callback)  => {
+      ipcRenderer.on('process:issue', (_, issue) => callback(issue));
+      return () => ipcRenderer.removeAllListeners('process:issue');
+    },
+    onCritical: (callback)  => {
+      ipcRenderer.on('process:critical', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('process:critical');
+    },
+    onDiagnosis: (callback) => {
+      ipcRenderer.on('process:diagnosis', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('process:diagnosis');
+    },
+  },
+
+  // ── Accounts ─────────────────────────────────────────────────────────────
+  accounts: {
+    list        : ()        => ipcRenderer.invoke('accounts:list'),
+    add         : (account) => ipcRenderer.invoke('accounts:add', account),
+    update      : (account) => ipcRenderer.invoke('accounts:update', account),
+    remove      : (id)      => ipcRenderer.invoke('accounts:remove', id),
+    testImap    : (config)  => ipcRenderer.invoke('accounts:testImap', config),
+    testSmtp    : (config)  => ipcRenderer.invoke('accounts:testSmtp', config),
+  },
+
+  // ── Messages ─────────────────────────────────────────────────────────────
+  messages: {
+    folders : (accountId)    => ipcRenderer.invoke('messages:folders', accountId),
+    list    : (query)        => ipcRenderer.invoke('messages:list', query),
+    get     : (id)           => ipcRenderer.invoke('messages:get', id),
+    search  : (query)        => ipcRenderer.invoke('messages:search', query),
+    mark    : (id, flags)    => ipcRenderer.invoke('messages:mark', id, flags),
+    delete  : (id)           => ipcRenderer.invoke('messages:delete', id),
+    counts  : (accountId)    => ipcRenderer.invoke('messages:counts', accountId),
+  },
+
+  // ── Sync ─────────────────────────────────────────────────────────────────
+  sync: {
+    run        : (accountId) => ipcRenderer.invoke('sync:run', accountId),
+    runAll     : ()          => ipcRenderer.invoke('sync:runAll'),
+    status     : ()          => ipcRenderer.invoke('sync:status'),
+    onProgress : (callback)  => {
+      ipcRenderer.on('sync:progress', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('sync:progress');
+    },
+    onNewMail  : (callback)  => {
+      ipcRenderer.on('sync:newMail', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('sync:newMail');
+    },
+  },
+
+  // ── Import ───────────────────────────────────────────────────────────────
+  importer: {
+    importMbox : (filePath, accountId) => ipcRenderer.invoke('importer:importMbox', filePath, accountId),
+    status     : ()                    => ipcRenderer.invoke('importer:status'),
+    onProgress : (callback)            => {
+      ipcRenderer.on('importer:progress', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('importer:progress');
+    },
+  },
+
+  // ── Mail send ────────────────────────────────────────────────────────────
+  mail: {
+    send    : (accountId, message) => ipcRenderer.invoke('mail:send', accountId, message),
+    outbox  : ()                   => ipcRenderer.invoke('mail:outbox'),
+    retry   : (id)                 => ipcRenderer.invoke('mail:retry', id),
+  },
+
+  // ── Backup ───────────────────────────────────────────────────────────────
+  backup: {
+    runFull        : (dest, compression) => ipcRenderer.invoke('backup:runFull', dest, compression),
+    runIncremental : (dest, compression) => ipcRenderer.invoke('backup:runIncremental', dest, compression),
+    listSnapshots  : (path)              => ipcRenderer.invoke('backup:listSnapshots', path),
+    restore        : (snapshotPath)      => ipcRenderer.invoke('backup:restore', snapshotPath),
+    log            : ()                  => ipcRenderer.invoke('backup:log'),
+    onProgress     : (callback)          => {
+      ipcRenderer.on('backup:progress', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('backup:progress');
+    },
+  },
+
+  // ── Drive management ─────────────────────────────────────────────────────
+  drive: {
+    listRemovable : ()         => ipcRenderer.invoke('drive:listRemovable'),
+    getHealth     : ()         => ipcRenderer.invoke('drive:getHealth'),
+    format        : (driveLetter) => ipcRenderer.invoke('drive:format', driveLetter),
+    safeEject     : ()         => ipcRenderer.invoke('drive:safeEject'),
+    onHealth      : (callback) => {
+      ipcRenderer.on('drive:health', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('drive:health');
+    },
+  },
+
+  // ── Integrity ────────────────────────────────────────────────────────────
+  integrity: {
+    spotCheck : ()          => ipcRenderer.invoke('integrity:spotCheck'),
+    deepScan  : ()          => ipcRenderer.invoke('integrity:deepScan'),
+    getReport : ()          => ipcRenderer.invoke('integrity:getReport'),
+    onProgress: (callback)  => {
+      ipcRenderer.on('integrity:progress', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('integrity:progress');
+    },
+  },
+
+  // ── Settings ─────────────────────────────────────────────────────────────
+  settings: {
+    get    : (key)         => ipcRenderer.invoke('settings:get', key),
+    set    : (key, value)  => ipcRenderer.invoke('settings:set', key, value),
+    getAll : ()            => ipcRenderer.invoke('settings:getAll'),
+  },
+
+  // ── Dialog helpers ────────────────────────────────────────────────────────
+  dialog: {
+    openFile : (options) => ipcRenderer.invoke('dialog:openFile', options),
+    openDir  : (options) => ipcRenderer.invoke('dialog:openDir', options),
+    saveFile : (options) => ipcRenderer.invoke('dialog:saveFile', options),
+  },
+
+  // ── Shell ────────────────────────────────────────────────────────────────
+  shell: {
+    openPath : (filePath) => ipcRenderer.invoke('shell:openPath', filePath),
+    openExternal: (url)   => ipcRenderer.invoke('shell:openExternal', url),
+  },
+
+  // ── App info ─────────────────────────────────────────────────────────────
+  app: {
+    version  : () => ipcRenderer.invoke('app:version'),
+    dataDir  : () => ipcRenderer.invoke('app:dataDir'),
+  },
+});
