@@ -118,6 +118,27 @@ const MIGRATIONS = [
       );
     `,
   },
+  // Phase 3 — add missing outbox columns + drafts table
+  {
+    version: 2,
+    sql: `
+      ALTER TABLE outbox ADD COLUMN from_addr   TEXT;
+      ALTER TABLE outbox ADD COLUMN eml_path    TEXT;
+      ALTER TABLE outbox ADD COLUMN attach_paths TEXT;
+
+      CREATE TABLE IF NOT EXISTS drafts (
+        id         TEXT PRIMARY KEY,
+        account_id TEXT NOT NULL,
+        from_addr  TEXT,
+        to_addrs   TEXT,
+        cc_addrs   TEXT,
+        bcc_addrs  TEXT,
+        subject    TEXT,
+        body_text  TEXT,
+        updated_at INTEGER
+      );
+    `,
+  },
   // Phase 4 will add checksum columns
   // Phase 5 will add backup_log table
 ];

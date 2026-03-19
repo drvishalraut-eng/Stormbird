@@ -18,7 +18,7 @@ const FOLDER_ICONS = {
 // Account colors cycling
 const ACCOUNT_COLORS = ['#f59e0b', '#60a5fa', '#4ade80', '#c084fc', '#f87171', '#22d3ee'];
 
-export default function Sidebar({ accounts, activeFolder, onFolderSelect, onImport, onAddAccount, onSync }) {
+export default function Sidebar({ accounts, activeFolder, onFolderSelect, onImport, onAddAccount, onSync, onCompose, onOutbox, outboxCount }) {
   const [collapsed,  setCollapsed]  = useState({});
   const [counts,     setCounts]     = useState({});
   const [importing,  setImporting]  = useState(false);
@@ -240,6 +240,12 @@ export default function Sidebar({ accounts, activeFolder, onFolderSelect, onImpo
         <SidebarButton onClick={() => onSync && accounts.filter(a => a.id !== 'local').forEach(a => onSync(a.id))}>
           ⟳ Sync all accounts
         </SidebarButton>
+        <SidebarButton onClick={onCompose} accent2>
+          ✉ Compose
+        </SidebarButton>
+        <SidebarButton onClick={onOutbox}>
+          📤 Outbox {outboxCount > 0 ? `(${outboxCount})` : ''}
+        </SidebarButton>
         <SidebarButton onClick={onAddAccount}>
           + Add Gmail account
         </SidebarButton>
@@ -297,7 +303,7 @@ function FolderRow({ icon, name, unread, isActive, onClick }) {
   );
 }
 
-function SidebarButton({ children, onClick, accent }) {
+function SidebarButton({ children, onClick, accent, accent2 }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button

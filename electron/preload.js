@@ -94,11 +94,30 @@ contextBridge.exposeInMainWorld('sb', {
     },
   },
 
-  // ── Mail send ────────────────────────────────────────────────────────────
+  // ── Mail send / outbox / drafts ───────────────────────────────────────────
   mail: {
-    send    : (accountId, message) => ipcRenderer.invoke('mail:send', accountId, message),
-    outbox  : ()                   => ipcRenderer.invoke('mail:outbox'),
-    retry   : (id)                 => ipcRenderer.invoke('mail:retry', id),
+    send        : (msg)     => ipcRenderer.invoke('mail:send', msg),
+    outbox      : ()        => ipcRenderer.invoke('mail:outbox'),
+    outboxCount : ()        => ipcRenderer.invoke('mail:outboxCount'),
+    retry       : (id)      => ipcRenderer.invoke('mail:retry', id),
+    deleteOutbox: (id)      => ipcRenderer.invoke('mail:deleteOutbox', id),
+    flushQueue  : ()        => ipcRenderer.invoke('mail:flushQueue'),
+    saveDraft   : (draft)   => ipcRenderer.invoke('mail:saveDraft', draft),
+    listDrafts  : ()        => ipcRenderer.invoke('mail:listDrafts'),
+    deleteDraft : (id)      => ipcRenderer.invoke('mail:deleteDraft', id),
+    testSmtp    : (config)  => ipcRenderer.invoke('mail:testSmtp', config),
+    onUpdate    : (callback) => {
+      ipcRenderer.on('outbox:update', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('outbox:update');
+    },
+  },
+
+  // ── Network status ────────────────────────────────────────────────────────
+  net: {
+    onStatus: (callback) => {
+      ipcRenderer.on('net:status', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('net:status');
+    },
   },
 
   // ── Backup ───────────────────────────────────────────────────────────────

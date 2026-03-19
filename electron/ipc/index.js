@@ -80,19 +80,31 @@ function registerIpc(ipcMain, dataDir, mainWindow) {
   require('./importer.ipc').register(ipcMain, dataDir, mainWindow);
   require('./accounts.ipc').register(ipcMain);
   require('./sync.ipc').register(ipcMain, dataDir, mainWindow);
+  require('./mail.ipc').register(ipcMain);
 
   // ── Initialize SyncService ────────────────────────────────────────────────
-  const SyncService = require('../services/SyncService');
+  const SyncService          = require('../services/SyncService');
+  const SmtpService          = require('../services/SmtpService');
+  const ConnectivityWatcher  = require('../services/ConnectivityWatcher');
+
   SyncService.init(mainWindow);
+  SmtpService.init(mainWindow, dataDir);
+
+  // ── Start connectivity watcher — auto-flush outbox on reconnect ───────────
+  ConnectivityWatcher.start({
+    window     : mainWindow,
+    onReconnect: () => SmtpService.flushQueue(),
+    onChange   : (online) => {
+      const logger = require('../logger');
+      logger.log('NET', `Network is now ${online ? 'online' : 'offline'}`);
+    },
+  });
 
   // ── Stub handlers for future phases ──────────────────────────────────────
   const stub = (name) => {
     try { ipcMain.handle(name, () => null); } catch (_) {}
   };
 
-  stub('mail:send');
-  stub('mail:outbox');
-  stub('mail:retry');
   stub('backup:runFull');
   stub('backup:runIncremental');
   stub('backup:listSnapshots');

@@ -33,3 +33,17 @@ Format: [version] — Phase name (date)
 ---
 
 *Next: v0.2.0 — Phase 1: Foundation (MBOX import, MessageStore, read UI)*
+
+## [0.4.0] — Phase 3 — Send
+
+### Added
+- ComposeWindow — To, Cc, Bcc, Subject, body, from-account picker
+- OutboxQueue — SQLite queue with status: queued → sending → sent | failed
+- SmtpService — nodemailer, Gmail App Password, port 587, STARTTLS
+- ConnectivityWatcher — DNS ping every 60s, auto-flush on reconnect
+- OutboxPanel — sidebar panel showing outbox status, retry, delete
+- Draft auto-save every 30 seconds
+- Offline indicator in titlebar
+- Outbox badge in status bar
+- Ctrl+N shortcut to open compose
+- Schema migration v2 — outbox columns, drafts table
