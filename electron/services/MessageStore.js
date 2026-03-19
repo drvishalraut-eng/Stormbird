@@ -355,6 +355,40 @@ function listMessages({ accountId, folder, page = 0, pageSize = 50, search = '' 
 }
 
 /**
+ * Global search across all accounts and folders.
+ * Searches subject, from_name, from_addr, to_addrs.
+ */
+function globalSearch(query, limit = 100) {
+  if (!db || !query) return [];
+  const s = `%${query}%`;
+  return _query(`
+    SELECT id, account_id, folder, subject, from_name, from_addr,
+           to_addrs, date_ms, has_attach, flags
+    FROM messages
+    WHERE subject LIKE ?
+       OR from_addr LIKE ?
+       OR from_name LIKE ?
+       OR to_addrs LIKE ?
+    ORDER BY date_ms DESC
+    LIMIT ?
+  `, [s, s, s, s, limit]).map(r => ({ ...r, flags: _parseJson(r.flags, []) }));
+}
+
+/**
+ * Check if first-run setup is needed.
+ * Returns true if no accounts have been configured yet.
+ */
+function isFirstRun() {
+  if (!db) return true;
+  try {
+    const row = _queryOne('SELECT COUNT(*) as n FROM accounts', []);
+    return !row || row.n === 0;
+  } catch (_) {
+    return true;
+  }
+}
+
+/**
  * Get a single message by ID.
  */
 function getMessage(id) {
@@ -583,6 +617,8 @@ module.exports = {
   insertMessage,
   getFolders,
   listMessages,
+  globalSearch,
+  isFirstRun,
   getMessage,
   markMessage,
   deleteMessage,

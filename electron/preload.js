@@ -60,13 +60,15 @@ contextBridge.exposeInMainWorld('sb', {
 
   // ── Messages ─────────────────────────────────────────────────────────────
   messages: {
-    folders : (accountId)    => ipcRenderer.invoke('messages:folders', accountId),
-    list    : (query)        => ipcRenderer.invoke('messages:list', query),
-    get     : (id)           => ipcRenderer.invoke('messages:get', id),
-    search  : (query)        => ipcRenderer.invoke('messages:search', query),
-    mark    : (id, flags)    => ipcRenderer.invoke('messages:mark', id, flags),
-    delete  : (id)           => ipcRenderer.invoke('messages:delete', id),
-    counts  : (accountId)    => ipcRenderer.invoke('messages:counts', accountId),
+    folders      : (accountId)    => ipcRenderer.invoke('messages:folders', accountId),
+    list         : (query)        => ipcRenderer.invoke('messages:list', query),
+    get          : (id)           => ipcRenderer.invoke('messages:get', id),
+    search       : (query)        => ipcRenderer.invoke('messages:search', query),
+    globalSearch : (q, limit)     => ipcRenderer.invoke('messages:globalSearch', q, limit),
+    allCounts    : ()             => ipcRenderer.invoke('messages:allCounts'),
+    mark         : (id, flags)    => ipcRenderer.invoke('messages:mark', id, flags),
+    delete       : (id)           => ipcRenderer.invoke('messages:delete', id),
+    counts       : (accountId)    => ipcRenderer.invoke('messages:counts', accountId),
   },
 
   // ── Sync ─────────────────────────────────────────────────────────────────
@@ -126,6 +128,7 @@ contextBridge.exposeInMainWorld('sb', {
     stopAndExit  : ()           => ipcRenderer.invoke('app:stopAndExit'),
     installMode  : ()           => ipcRenderer.invoke('app:installMode'),
     ejectWillKill: (drive)      => ipcRenderer.invoke('app:ejectWillKillApp', drive),
+    isFirstRun   : ()           => ipcRenderer.invoke('app:isFirstRun'),
   },
 
   // ── NAS Backup ────────────────────────────────────────────────────────────

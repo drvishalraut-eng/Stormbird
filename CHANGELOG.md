@@ -74,3 +74,40 @@ Format: [version] — Phase name (date)
 - ProcessManager.stopAll(), stopProcess(), stopFn in register options
 - NAS Backup button in sidebar
 - Stop all processes + Stop & quit buttons in sidebar
+
+## [1.0.0] — Phase 6 — Final release
+
+### Added
+- Setup wizard — 4-step first-run: welcome, data location, account, done
+- Global search — Ctrl+F, searches subject/from/to across all accounts
+- Search results with match highlighting and folder badges
+- SettingsPanel — General (theme, paths), Shortcuts reference, About
+- About screen with version, build info, GitHub link
+- Keyboard shortcut: Ctrl+F (search), Ctrl+, (settings), F5 (sync all)
+- Settings gear icon in titlebar
+- Search bar in titlebar (clickable)
+- MessageStore.globalSearch, isFirstRun
+- First-run detection on boot
+
+### Changed
+- Version bumped to 1.0.0
+- Phase label removed from status bar
+- Console shortcut hint simplified
+
+## [1.0.0] — Phase 6 — Polish & Release
+
+### Added
+- Setup wizard — first-run flow: welcome, data folder, Gmail account, quick-reference
+- Global search in titlebar — Ctrl+F opens SearchPanel across all accounts/folders
+- Settings panel — theme toggle, data path, install mode, keyboard shortcuts, about
+- ⚙ Settings button in titlebar (Ctrl+,)
+- Escape key closes top-most open panel in priority order
+- SetupWizard shown automatically on first run (no accounts configured)
+- handleSearchSelect — navigates directly to message from search result
+- Version bumped to 1.0.0
+- README rewritten for public release
+
+### Changed
+- App.jsx fully rewritten for v1.0.0 — all panels wired, all shortcuts active
+- Status bar shows "Stormbird v1.0.0" (no phase label)
+- TitleBtn width reduced to 38px for tighter titlebar

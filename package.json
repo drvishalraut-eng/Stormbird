@@ -1,6 +1,6 @@
 {
   "name": "stormbird",
-  "version": "0.5.1",
+  "version": "1.0.0",
   "description": "USB-portable email archiver with backup and AI-assisted issue resolution",
   "main": "electron/main.js",
   "author": "drvishalraut-eng",

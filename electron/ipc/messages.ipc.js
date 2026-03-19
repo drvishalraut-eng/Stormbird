@@ -72,6 +72,39 @@ function register(ipcMain, dataDir) {
     return MessageStore.getCounts(accountId);
   });
 
+  // ── Global search across all accounts ──
+  ipcMain.handle('messages:globalSearch', (_, query, limit) => {
+    return MessageStore.globalSearch(query, limit || 100);
+  });
+
+  // ── First run check ──
+  ipcMain.handle('app:isFirstRun', () => {
+    return MessageStore.isFirstRun();
+  });
+
+  // ── Get all folder counts (for badges) ──
+  ipcMain.handle('messages:allCounts', () => {
+    const { db } = { db: MessageStore._getDb() };
+    if (!db) return {};
+    try {
+      const rows = db.exec(`
+        SELECT account_id, folder,
+               COUNT(*) as total,
+               SUM(CASE WHEN flags NOT LIKE '%"read"%' AND flags NOT LIKE '%\\\\Seen%' THEN 1 ELSE 0 END) as unread
+        FROM messages GROUP BY account_id, folder
+      `);
+      const result = {};
+      if (rows[0]) {
+        for (const row of rows[0].values) {
+          const [acct, folder, total, unread] = row;
+          if (!result[acct]) result[acct] = {};
+          result[acct][folder] = { total, unread: unread || 0 };
+        }
+      }
+      return result;
+    } catch (_) { return {}; }
+  });
+
   logger.log('BOOT', 'Message IPC handlers registered');
 }
 
