@@ -80,6 +80,7 @@ function register(name, options) {
     restartable        : options.restartable        ?? false,
     criticalOnCrash    : options.criticalOnCrash    ?? false,
     restartFn          : options.restartFn          || null,
+    stopFn             : options.stopFn             || null,
     heartbeatInterval  : options.heartbeatInterval  || 60000,
     stalledAfter       : options.stalledAfter        || options.heartbeatInterval * 3 || 180000,
     lastHeartbeat      : Date.now(),
@@ -392,6 +393,44 @@ function stop() {
   logger.log('MANAGER', 'Process Manager stopped');
 }
 
+/**
+ * Gracefully stop a single named process.
+ * Sets state to DISABLED and calls its stopFn if registered.
+ */
+async function stopProcess(name) {
+  const entry = processes.get(name);
+  if (!entry) return;
+  logger.log('MANAGER', `Stopping ${name}…`);
+  _setState(entry, STATE.DISABLED, 'Manually stopped');
+  if (entry.stopFn) {
+    try { await entry.stopFn(); } catch (_) {}
+  }
+}
+
+/**
+ * Stop all running processes gracefully, in safe order.
+ * Returns when all stop functions have resolved.
+ */
+async function stopAll() {
+  logger.log('MANAGER', 'Stopping all processes…');
+
+  // Stop in reverse-dependency order:
+  // connectivity watcher → sync → smtp → integrity → others
+  const ORDER = ['ConnectivityWatcher', 'ImapSync', 'SmtpSend', 'IntegrityScan'];
+
+  for (const name of ORDER) {
+    await stopProcess(name);
+  }
+
+  // Stop any remaining registered processes
+  for (const [name] of processes) {
+    if (!ORDER.includes(name)) await stopProcess(name);
+  }
+
+  stop(); // stop the heartbeat checker
+  logger.log('MANAGER', 'All processes stopped');
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -409,4 +448,6 @@ module.exports = {
   resolveIssue,
   start,
   stop,
+  stopProcess,
+  stopAll,
 };

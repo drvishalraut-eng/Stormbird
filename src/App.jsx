@@ -11,6 +11,8 @@ import ProcessManagerUI from './components/ProcessManagerUI';
 import AccountSetup     from './components/AccountSetup';
 import ComposeWindow    from './components/ComposeWindow';
 import OutboxPanel      from './components/OutboxPanel';
+import DrivePanel       from './components/DrivePanel';
+import NasBackupPanel   from './components/NasBackupPanel';
 import './styles/globals.css';
 
 export default function App() {
@@ -20,6 +22,8 @@ export default function App() {
   const [accountSetupOpen, setAccountSetupOpen]  = useState(false);
   const [composeOpen,      setComposeOpen]       = useState(false);
   const [outboxOpen,       setOutboxOpen]        = useState(false);
+  const [driveOpen,        setDriveOpen]         = useState(false);
+  const [nasBackupOpen,    setNasBackupOpen]      = useState(false);
   const [activeFolder,     setActiveFolder]      = useState(null);
   const [activeMessage,    setActiveMessage]     = useState(null);
   const [accounts,         setAccounts]          = useState([]);
@@ -132,6 +136,16 @@ export default function App() {
     await window.sb.sync.run(accountId);
   };
 
+  const handleStopAll = async () => {
+    if (!window.sb) return;
+    await window.sb.appControl.stopAll();
+  };
+
+  const handleStopAndExit = async () => {
+    if (!window.sb) return;
+    await window.sb.appControl.stopAndExit();
+  };
+
   const handleAccountAdded = () => {
     setAccountSetupOpen(false);
     loadAccounts();
@@ -209,6 +223,9 @@ export default function App() {
           onAddAccount   = {() => setAccountSetupOpen(true)}
           onCompose      = {() => setComposeOpen(true)}
           onOutbox       = {() => setOutboxOpen(true)}
+          onNasBackup    = {() => setNasBackupOpen(true)}
+          onStopAll      = {handleStopAll}
+          onStopAndExit  = {handleStopAndExit}
           outboxCount    = {outboxCount}
         />
         <MessageList
@@ -252,6 +269,13 @@ export default function App() {
             <span>|</span>
           </>
         )}
+        <button onClick={() => setDriveOpen(true)} style={{
+          background: 'none', border: 'none', color: 'var(--text-muted)',
+          cursor: 'pointer', fontSize: 10, fontFamily: 'inherit', padding: 0,
+        }}>
+          ⏏ Safe Eject
+        </button>
+        <span>|</span>
         <button onClick={() => setConsoleOpen(o => !o)} style={{
           background: consoleOpen ? 'var(--accent-dim)' : 'none',
           border: consoleOpen ? '1px solid var(--border-accent)' : 'none',
@@ -285,6 +309,16 @@ export default function App() {
       <OutboxPanel
         isOpen  = {outboxOpen}
         onClose = {() => { setOutboxOpen(false); loadOutboxCount(); }}
+      />
+
+      <DrivePanel
+        isOpen  = {driveOpen}
+        onClose = {() => setDriveOpen(false)}
+      />
+
+      <NasBackupPanel
+        isOpen  = {nasBackupOpen}
+        onClose = {() => setNasBackupOpen(false)}
       />
     </div>
   );

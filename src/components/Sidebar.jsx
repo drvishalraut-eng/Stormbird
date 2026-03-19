@@ -18,7 +18,7 @@ const FOLDER_ICONS = {
 // Account colors cycling
 const ACCOUNT_COLORS = ['#f59e0b', '#60a5fa', '#4ade80', '#c084fc', '#f87171', '#22d3ee'];
 
-export default function Sidebar({ accounts, activeFolder, onFolderSelect, onImport, onAddAccount, onSync, onCompose, onOutbox, outboxCount }) {
+export default function Sidebar({ accounts, activeFolder, onFolderSelect, onImport, onAddAccount, onSync, onCompose, onOutbox, outboxCount, onNasBackup, onStopAll, onStopAndExit }) {
   const [collapsed,  setCollapsed]  = useState({});
   const [counts,     setCounts]     = useState({});
   const [importing,  setImporting]  = useState(false);
@@ -246,8 +246,17 @@ export default function Sidebar({ accounts, activeFolder, onFolderSelect, onImpo
         <SidebarButton onClick={onOutbox}>
           📤 Outbox {outboxCount > 0 ? `(${outboxCount})` : ''}
         </SidebarButton>
+        <SidebarButton onClick={onNasBackup}>
+          🗄 NAS Backup
+        </SidebarButton>
         <SidebarButton onClick={onAddAccount}>
           + Add Gmail account
+        </SidebarButton>
+        <SidebarButton onClick={onStopAll}>
+          ⏹ Stop all processes
+        </SidebarButton>
+        <SidebarButton onClick={onStopAndExit} danger>
+          ✕ Stop & quit
         </SidebarButton>
       </div>
     </div>
@@ -303,29 +312,43 @@ function FolderRow({ icon, name, unread, isActive, onClick }) {
   );
 }
 
-function SidebarButton({ children, onClick, accent, accent2 }) {
+function SidebarButton({ children, onClick, accent, accent2, danger }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
-      onClick      = {onClick}
-      onMouseEnter = {() => setHovered(true)}
-      onMouseLeave = {() => setHovered(false)}
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         width      : '100%',
-        padding    : '5px 8px',
-        background : accent
-          ? (hovered ? 'var(--accent)' : 'var(--accent-dim)')
-          : (hovered ? 'var(--bg-hover)' : 'none'),
-        border     : `1px solid ${accent ? 'var(--border-accent)' : 'var(--border)'}`,
-        color      : accent
-          ? (hovered ? 'var(--bg-app)' : 'var(--text-accent)')
-          : 'var(--text-second)',
+        padding    : '7px 14px',
+        textAlign  : 'left',
+        background : danger
+          ? (hovered ? 'rgba(239,68,68,0.15)' : 'none')
+          : accent
+            ? (hovered ? 'var(--accent)' : 'var(--accent-dim)')
+            : accent2
+              ? (hovered ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.06)')
+              : (hovered ? 'var(--bg-hover)' : 'none'),
+        border     : `1px solid ${
+          danger  ? 'rgba(239,68,68,0.3)' :
+          accent  ? 'var(--border-accent)' :
+          accent2 ? 'rgba(96,165,250,0.3)' :
+          'var(--border)'
+        }`,
+        color      : danger
+          ? 'var(--cat-error)'
+          : accent
+            ? (hovered ? 'var(--bg-app)' : 'var(--text-accent)')
+            : accent2
+              ? '#60a5fa'
+              : 'var(--text-second)',
         fontSize   : 11,
         cursor     : 'pointer',
         fontFamily : 'inherit',
-        fontWeight : accent ? 600 : 400,
-        textAlign  : 'left',
-        transition : 'all 0.1s',
+        fontWeight : (accent || accent2) ? 600 : 400,
+        marginBottom: 4,
+        transition : 'background 0.1s',
       }}
     >
       {children}

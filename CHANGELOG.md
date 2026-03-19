@@ -47,3 +47,30 @@ Format: [version] — Phase name (date)
 - Outbox badge in status bar
 - Ctrl+N shortcut to open compose
 - Schema migration v2 — outbox columns, drafts table
+
+## [0.5.0] — Phase 4 — Integrity & Safe Eject
+
+### Added
+- IntegrityScanner — spot-check (50 random files on startup), deep scan (all files weekly)
+- SHA-256 checksum verification against database records
+- Corrupt file detection and flagging in database
+- MANIFEST.txt — plain-text checksum file per year/month folder
+- Rolling DB snapshots — last 3 copies, pruned automatically
+- DriveManager — Safe Eject (flush WAL → close DB → Windows eject)
+- DrivePanel UI — health, safe eject, scan controls, snapshot list
+- Safe Eject button in status bar
+- Schema migration v2 — outbox from_addr, eml_path, attach_paths, drafts table
+- MessageStore.sampleMessages, listMessagesBatch, flagCorrupt
+
+## [0.5.1] — Phase 4 additions
+
+### Added
+- Stop all processes — graceful shutdown of IMAP, SMTP, connectivity, integrity in order
+- Stop all & quit — confirmation dialog, flushes DB, then app.quit()
+- InstallMode detection — portable (exe+data on USB) vs data-only vs fixed
+- Safe Eject now shows warning banner in portable mode
+- NasBackup service — full and incremental copy of Stormbird-Data to any path
+- NasBackupPanel UI — browse path, schedule (off/daily/weekly), progress bar, run now
+- ProcessManager.stopAll(), stopProcess(), stopFn in register options
+- NAS Backup button in sidebar
+- Stop all processes + Stop & quit buttons in sidebar

@@ -429,6 +429,38 @@ function getTotalCount() {
   return _queryOne('SELECT COUNT(*) as n FROM messages').n;
 }
 
+/**
+ * Return a random sample of messages for spot-check.
+ */
+function sampleMessages(limit) {
+  if (!db) return [];
+  return _query(
+    'SELECT id, eml_path, checksum FROM messages WHERE eml_path IS NOT NULL ORDER BY RANDOM() LIMIT ?',
+    [limit]
+  );
+}
+
+/**
+ * Return a batch of messages for deep scan.
+ */
+function listMessagesBatch(offset, limit) {
+  if (!db) return [];
+  return _query(
+    'SELECT id, eml_path, checksum FROM messages WHERE eml_path IS NOT NULL LIMIT ? OFFSET ?',
+    [limit, offset]
+  );
+}
+
+/**
+ * Flag a message as corrupt.
+ */
+function flagCorrupt(id) {
+  if (!db) return;
+  try {
+    db.run("UPDATE messages SET flags = '[\"\\\\Corrupt\"]' WHERE id = ?", [id]);
+  } catch (_) {}
+}
+
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 function getSetting(key) {
@@ -557,9 +589,12 @@ module.exports = {
   getCounts,
   messageExists,
   getTotalCount,
+  sampleMessages,
+  listMessagesBatch,
+  flagCorrupt,
   getSetting,
   setSetting,
   flush,
   close,
-  _getDb: () => db,  // for AccountManager shared access
+  _getDb: () => db,
 };

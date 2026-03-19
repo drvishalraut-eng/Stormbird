@@ -120,14 +120,23 @@ contextBridge.exposeInMainWorld('sb', {
     },
   },
 
-  // ── Backup ───────────────────────────────────────────────────────────────
+  // ── App controls ──────────────────────────────────────────────────────────
+  appControl: {
+    stopAll      : ()           => ipcRenderer.invoke('app:stopAll'),
+    stopAndExit  : ()           => ipcRenderer.invoke('app:stopAndExit'),
+    installMode  : ()           => ipcRenderer.invoke('app:installMode'),
+    ejectWillKill: (drive)      => ipcRenderer.invoke('app:ejectWillKillApp', drive),
+  },
+
+  // ── NAS Backup ────────────────────────────────────────────────────────────
   backup: {
-    runFull        : (dest, compression) => ipcRenderer.invoke('backup:runFull', dest, compression),
-    runIncremental : (dest, compression) => ipcRenderer.invoke('backup:runIncremental', dest, compression),
-    listSnapshots  : (path)              => ipcRenderer.invoke('backup:listSnapshots', path),
-    restore        : (snapshotPath)      => ipcRenderer.invoke('backup:restore', snapshotPath),
-    log            : ()                  => ipcRenderer.invoke('backup:log'),
-    onProgress     : (callback)          => {
+    runFull        : (nasPath)          => ipcRenderer.invoke('backup:runFull', nasPath),
+    runIncremental : (nasPath)          => ipcRenderer.invoke('backup:runIncremental', nasPath),
+    setSchedule    : (schedule, path)   => ipcRenderer.invoke('backup:setSchedule', schedule, path),
+    getSchedule    : ()                 => ipcRenderer.invoke('backup:getSchedule'),
+    getStatus      : ()                 => ipcRenderer.invoke('backup:getStatus'),
+    browsePath     : ()                 => ipcRenderer.invoke('backup:browsePath'),
+    onProgress     : (callback)         => {
       ipcRenderer.on('backup:progress', (_, data) => callback(data));
       return () => ipcRenderer.removeAllListeners('backup:progress');
     },
@@ -137,22 +146,28 @@ contextBridge.exposeInMainWorld('sb', {
   drive: {
     listRemovable : ()         => ipcRenderer.invoke('drive:listRemovable'),
     getHealth     : ()         => ipcRenderer.invoke('drive:getHealth'),
-    format        : (driveLetter) => ipcRenderer.invoke('drive:format', driveLetter),
-    safeEject     : ()         => ipcRenderer.invoke('drive:safeEject'),
-    onHealth      : (callback) => {
-      ipcRenderer.on('drive:health', (_, data) => callback(data));
-      return () => ipcRenderer.removeAllListeners('drive:health');
+    safeEject     : (letter)   => ipcRenderer.invoke('drive:safeEject', letter),
+    onEjected     : (callback) => {
+      ipcRenderer.on('drive:ejected', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('drive:ejected');
     },
   },
 
   // ── Integrity ────────────────────────────────────────────────────────────
   integrity: {
-    spotCheck : ()          => ipcRenderer.invoke('integrity:spotCheck'),
-    deepScan  : ()          => ipcRenderer.invoke('integrity:deepScan'),
-    getReport : ()          => ipcRenderer.invoke('integrity:getReport'),
-    onProgress: (callback)  => {
+    spotCheck      : ()         => ipcRenderer.invoke('integrity:spotCheck'),
+    deepScan       : ()         => ipcRenderer.invoke('integrity:deepScan'),
+    writeManifests : ()         => ipcRenderer.invoke('integrity:writeManifests'),
+    takeSnapshot   : ()         => ipcRenderer.invoke('integrity:takeSnapshot'),
+    listSnapshots  : ()         => ipcRenderer.invoke('integrity:listSnapshots'),
+    getReport      : ()         => ipcRenderer.invoke('integrity:getReport'),
+    onProgress     : (callback) => {
       ipcRenderer.on('integrity:progress', (_, data) => callback(data));
       return () => ipcRenderer.removeAllListeners('integrity:progress');
+    },
+    onReport       : (callback) => {
+      ipcRenderer.on('integrity:report', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('integrity:report');
     },
   },
 

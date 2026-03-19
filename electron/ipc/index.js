@@ -81,42 +81,55 @@ function registerIpc(ipcMain, dataDir, mainWindow) {
   require('./accounts.ipc').register(ipcMain);
   require('./sync.ipc').register(ipcMain, dataDir, mainWindow);
   require('./mail.ipc').register(ipcMain);
+  require('./integrity.ipc').register(ipcMain);
+  require('./app.ipc').register(ipcMain, mainWindow);
 
-  // ── Initialize SyncService ────────────────────────────────────────────────
+  // ── Initialize services ───────────────────────────────────────────────────
   const SyncService          = require('../services/SyncService');
   const SmtpService          = require('../services/SmtpService');
   const ConnectivityWatcher  = require('../services/ConnectivityWatcher');
+  const IntegrityScanner     = require('../services/IntegrityScanner');
+  const DriveManager         = require('../services/DriveManager');
+  const NasBackup            = require('../services/NasBackup');
+  const InstallMode          = require('../services/InstallMode');
 
   SyncService.init(mainWindow);
   SmtpService.init(mainWindow, dataDir);
+  IntegrityScanner.init(mainWindow, dataDir);
+  DriveManager.init(mainWindow, dataDir);
+  NasBackup.init(mainWindow, dataDir);
 
-  // ── Start connectivity watcher — auto-flush outbox on reconnect ───────────
+  // Detect install mode (portable vs data-only vs fixed) — async, non-blocking
+  InstallMode.detect(dataDir).then(mode => {
+    logger.log('BOOT', `Install mode detected: ${mode}`);
+  });
+
+  // Start connectivity watcher
   ConnectivityWatcher.start({
     window     : mainWindow,
     onReconnect: () => SmtpService.flushQueue(),
     onChange   : (online) => {
-      const logger = require('../logger');
       logger.log('NET', `Network is now ${online ? 'online' : 'offline'}`);
     },
   });
+
+  // Register stopFn so ProcessManager.stopAll() can shut it down
+  const ProcessManager = require('../ProcessManager');
+  ProcessManager.register('ConnectivityWatcher', {
+    restartable: false,
+    stopFn     : () => ConnectivityWatcher.stop(),
+  });
+  ProcessManager.idle('ConnectivityWatcher', 'Watching network');
 
   // ── Stub handlers for future phases ──────────────────────────────────────
   const stub = (name) => {
     try { ipcMain.handle(name, () => null); } catch (_) {}
   };
 
-  stub('backup:runFull');
-  stub('backup:runIncremental');
   stub('backup:listSnapshots');
   stub('backup:restore');
   stub('backup:log');
-  stub('drive:listRemovable');
-  stub('drive:getHealth');
   stub('drive:format');
-  stub('drive:safeEject');
-  stub('integrity:spotCheck');
-  stub('integrity:deepScan');
-  stub('integrity:getReport');
   stub('sync:stop');
 
   logger.log('BOOT', 'All IPC handlers registered');
