@@ -119,6 +119,14 @@ All emails are stored as standard `.eml` files readable by any email client — 
 | 6 | **v1.0.0** | Setup wizard, global search, settings panel, Escape handling, polish |
 
 ---
+keywords : 
+"download Gmail to USB drive"
+"offline email archive"
+"Gmail backup to local drive"
+"portable email client Windows"
+"store email as eml files"
+
+---
 
 ## License
 
