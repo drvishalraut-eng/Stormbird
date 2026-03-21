@@ -23,6 +23,7 @@ export default function App() {
   const [consoleOpen,      setConsoleOpen]       = useState(false);
   const [processesOpen,    setProcessesOpen]     = useState(false);
   const [accountSetupOpen, setAccountSetupOpen]  = useState(false);
+  const [editingAccount,   setEditingAccount]    = useState(null); // null = add mode, object = edit mode
   const [composeOpen,      setComposeOpen]       = useState(false);
   const [outboxOpen,       setOutboxOpen]        = useState(false);
   const [driveOpen,        setDriveOpen]         = useState(false);
@@ -168,7 +169,13 @@ export default function App() {
 
   const handleAccountAdded = () => {
     setAccountSetupOpen(false);
+    setEditingAccount(null);
     loadAccounts();
+  };
+
+  const handleAccountCancel = () => {
+    setAccountSetupOpen(false);
+    setEditingAccount(null);
   };
 
   const handleWizardComplete = () => {
@@ -210,6 +217,10 @@ export default function App() {
           STORMBIRD
         </span>
         <span style={{ color: 'var(--text-muted)', fontSize: 10, marginLeft: 8 }}>v{version}</span>
+        <span style={{ color: 'var(--border-strong)', fontSize: 10, margin: '0 8px' }}>|</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: '0.06em', opacity: 0.6 }}>
+          WHITE COAT FOUNDRY
+        </span>
 
         {!isOnline && (
           <div style={{
@@ -259,7 +270,8 @@ export default function App() {
           onFolderSelect = {(f) => { setActiveFolder(f); setActiveMessage(null); }}
           onImport       = {handleImport}
           onSync         = {handleSync}
-          onAddAccount   = {() => setAccountSetupOpen(true)}
+          onAddAccount   = {() => { setEditingAccount(null); setAccountSetupOpen(true); }}
+          onEditAccount  = {(acct) => { setEditingAccount(acct); setAccountSetupOpen(true); }}
           onCompose      = {() => setComposeOpen(true)}
           onOutbox       = {() => setOutboxOpen(true)}
           onNasBackup    = {() => setNasBackupOpen(true)}
@@ -329,7 +341,11 @@ export default function App() {
       <ProcessManagerUI isOpen={processesOpen} onClose={() => setProcessesOpen(false)} />
 
       {accountSetupOpen && (
-        <AccountSetup onSave={handleAccountAdded} onCancel={() => setAccountSetupOpen(false)} />
+        <AccountSetup
+          account  = {editingAccount}
+          onSave   = {handleAccountAdded}
+          onCancel = {handleAccountCancel}
+        />
       )}
 
       {composeOpen && (
@@ -350,6 +366,7 @@ export default function App() {
         isOpen        = {settingsOpen}
         onClose       = {() => setSettingsOpen(false)}
         theme         = {theme}
+        version       = {version}
         onThemeChange = {(t) => { setTheme(t); document.documentElement.setAttribute('data-theme', t); }}
       />
     </div>

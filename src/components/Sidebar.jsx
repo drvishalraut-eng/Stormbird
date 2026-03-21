@@ -18,7 +18,7 @@ const FOLDER_ICONS = {
 // Account colors cycling
 const ACCOUNT_COLORS = ['#f59e0b', '#60a5fa', '#4ade80', '#c084fc', '#f87171', '#22d3ee'];
 
-export default function Sidebar({ accounts, activeFolder, onFolderSelect, onImport, onAddAccount, onSync, onCompose, onOutbox, outboxCount, onNasBackup, onStopAll, onStopAndExit }) {
+export default function Sidebar({ accounts, activeFolder, onFolderSelect, onImport, onAddAccount, onSync, onCompose, onOutbox, outboxCount, onNasBackup, onStopAll, onStopAndExit, onEditAccount }) {
   const [collapsed,  setCollapsed]  = useState({});
   const [counts,     setCounts]     = useState({});
   const [importing,  setImporting]  = useState(false);
@@ -136,51 +136,14 @@ export default function Sidebar({ accounts, activeFolder, onFolderSelect, onImpo
           return (
             <div key={acct.id}>
               {/* Account header */}
-              <div
-                onClick   = {() => toggleAcct(acct.id)}
-                style={{
-                  display     : 'flex',
-                  alignItems  : 'center',
-                  gap         : 7,
-                  padding     : '7px 8px 5px',
-                  cursor      : 'pointer',
-                  borderBottom: '1px solid var(--border)',
-                  background  : 'var(--bg-toolbar)',
-                }}
-                onMouseEnter = {e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                onMouseLeave = {e => e.currentTarget.style.background = 'var(--bg-toolbar)'}
-              >
-                <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                  {isCollapsed ? '▶' : '▼'}
-                </span>
-                <div style={{
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: color, flexShrink: 0,
-                }} />
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{
-                    fontSize    : 11,
-                    fontWeight  : 700,
-                    color       : 'var(--text-primary)',
-                    overflow    : 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace  : 'nowrap',
-                  }}>
-                    {acct.email === 'local' ? 'Local Import' : acct.email.split('@')[0]}
-                  </div>
-                  {acct.email !== 'local' && (
-                    <div style={{
-                      fontSize    : 9,
-                      color       : 'var(--text-muted)',
-                      overflow    : 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace  : 'nowrap',
-                    }}>
-                      {acct.email}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <AccountHeader
+                acct       = {acct}
+                color      = {color}
+                isCollapsed= {isCollapsed}
+                onToggle   = {() => toggleAcct(acct.id)}
+                onSync     = {acct.id !== 'local' ? () => onSync && onSync(acct.id) : null}
+                onEdit     = {acct.id !== 'local' ? () => onEditAccount && onEditAccount(acct) : null}
+              />
 
               {/* Folder list */}
               {!isCollapsed && folders.map(folder => {
@@ -228,35 +191,38 @@ export default function Sidebar({ accounts, activeFolder, onFolderSelect, onImpo
 
       {/* ── Bottom actions ── */}
       <div style={{
-        borderTop : '1px solid var(--border-strong)',
-        padding   : 6,
-        display   : 'flex',
+        borderTop    : '1px solid var(--border-strong)',
+        padding      : '6px 6px 8px',
+        display      : 'flex',
         flexDirection: 'column',
-        gap       : 4,
+        gap          : 3,
       }}>
-        <SidebarButton onClick={handleImport} accent>
-          📥 Import MBOX
+        <SidebarButton onClick={handleImport} accent icon="📥">
+          Import MBOX
         </SidebarButton>
-        <SidebarButton onClick={() => onSync && accounts.filter(a => a.id !== 'local').forEach(a => onSync(a.id))}>
-          ⟳ Sync all accounts
+        <SidebarButton onClick={() => onSync && accounts.filter(a => a.id !== 'local').forEach(a => onSync(a.id))} icon="⟳">
+          Sync all accounts
         </SidebarButton>
-        <SidebarButton onClick={onCompose} accent2>
-          ✉ Compose
+        <SidebarButton onClick={onCompose} accent2 icon="✉">
+          Compose
         </SidebarButton>
-        <SidebarButton onClick={onOutbox}>
-          📤 Outbox {outboxCount > 0 ? `(${outboxCount})` : ''}
+        <SidebarButton onClick={onOutbox} icon="📤">
+          Outbox {outboxCount > 0 ? <span style={{ color: 'var(--accent)', fontWeight: 700, marginLeft: 4 }}>({outboxCount})</span> : ''}
         </SidebarButton>
-        <SidebarButton onClick={onNasBackup}>
-          🗄 NAS Backup
+        <SidebarButton onClick={onNasBackup} icon="💾">
+          NAS Backup
         </SidebarButton>
-        <SidebarButton onClick={onAddAccount}>
-          + Add Gmail account
+        <SidebarButton onClick={onAddAccount} icon="＋">
+          Add Gmail account
         </SidebarButton>
-        <SidebarButton onClick={onStopAll}>
-          ⏹ Stop all processes
+
+        <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+
+        <SidebarButton onClick={onStopAll} icon="⏹">
+          Stop all processes
         </SidebarButton>
-        <SidebarButton onClick={onStopAndExit} danger>
-          ✕ Stop & quit
+        <SidebarButton onClick={onStopAndExit} danger icon="⏻">
+          Stop &amp; quit
         </SidebarButton>
       </div>
     </div>
@@ -312,46 +278,153 @@ function FolderRow({ icon, name, unread, isActive, onClick }) {
   );
 }
 
-function SidebarButton({ children, onClick, accent, accent2, danger }) {
+function SidebarButton({ children, onClick, accent, accent2, danger, icon }) {
   const [hovered, setHovered] = useState(false);
+
+  const bgColor = danger
+    ? (hovered ? 'rgba(239,68,68,0.18)' : 'rgba(239,68,68,0.06)')
+    : accent
+      ? (hovered ? 'var(--accent)' : 'var(--accent-dim)')
+      : accent2
+        ? (hovered ? 'rgba(96,165,250,0.2)' : 'rgba(96,165,250,0.08)')
+        : (hovered ? 'var(--bg-hover)' : 'transparent');
+
+  const borderColor = danger
+    ? (hovered ? 'rgba(239,68,68,0.6)' : 'rgba(239,68,68,0.25)')
+    : accent
+      ? 'var(--border-accent)'
+      : accent2
+        ? (hovered ? 'rgba(96,165,250,0.6)' : 'rgba(96,165,250,0.25)')
+        : (hovered ? 'var(--border-strong)' : 'var(--border)');
+
+  const textColor = danger
+    ? 'var(--cat-error)'
+    : accent
+      ? (hovered ? '#000' : 'var(--text-accent)')
+      : accent2
+        ? (hovered ? '#93c5fd' : '#60a5fa')
+        : 'var(--text-second)';
+
+  const iconColor = danger
+    ? 'var(--cat-error)'
+    : accent
+      ? (hovered ? '#000' : 'var(--accent)')
+      : accent2
+        ? '#60a5fa'
+        : 'var(--text-muted)';
+
   return (
     <button
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        width      : '100%',
-        padding    : '7px 14px',
-        textAlign  : 'left',
-        background : danger
-          ? (hovered ? 'rgba(239,68,68,0.15)' : 'none')
-          : accent
-            ? (hovered ? 'var(--accent)' : 'var(--accent-dim)')
-            : accent2
-              ? (hovered ? 'rgba(96,165,250,0.15)' : 'rgba(96,165,250,0.06)')
-              : (hovered ? 'var(--bg-hover)' : 'none'),
-        border     : `1px solid ${
-          danger  ? 'rgba(239,68,68,0.3)' :
-          accent  ? 'var(--border-accent)' :
-          accent2 ? 'rgba(96,165,250,0.3)' :
-          'var(--border)'
-        }`,
-        color      : danger
-          ? 'var(--cat-error)'
-          : accent
-            ? (hovered ? 'var(--bg-app)' : 'var(--text-accent)')
-            : accent2
-              ? '#60a5fa'
-              : 'var(--text-second)',
-        fontSize   : 11,
-        cursor     : 'pointer',
-        fontFamily : 'inherit',
-        fontWeight : (accent || accent2) ? 600 : 400,
-        marginBottom: 4,
-        transition : 'background 0.1s',
+        width        : '100%',
+        padding      : '7px 10px',
+        textAlign    : 'left',
+        display      : 'flex',
+        alignItems   : 'center',
+        gap          : 8,
+        background   : bgColor,
+        border       : `1px solid ${borderColor}`,
+        color        : textColor,
+        fontSize     : 11,
+        cursor       : 'pointer',
+        fontFamily   : 'inherit',
+        fontWeight   : (accent || accent2) ? 600 : 500,
+        transition   : 'background 0.1s, border-color 0.1s',
       }}
     >
-      {children}
+      {icon && (
+        <span style={{
+          fontSize   : 14,
+          lineHeight : 1,
+          width      : 18,
+          textAlign  : 'center',
+          flexShrink : 0,
+          color      : iconColor,
+          filter     : (accent && hovered) ? 'brightness(0)' : 'none',
+          transition : 'color 0.1s',
+        }}>
+          {icon}
+        </span>
+      )}
+      <span>{children}</span>
     </button>
+  );
+}
+
+// ── AccountHeader — per-account row with sync + edit buttons ──────────────────
+
+function AccountHeader({ acct, color, isCollapsed, onToggle, onSync, onEdit }) {
+  return (
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '7px 8px 5px',
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--bg-toolbar)',
+        position: 'relative',
+      }}
+    >
+      {/* Collapse toggle */}
+      <span
+        onClick={onToggle}
+        style={{ fontSize: 9, color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}
+      >
+        {isCollapsed ? '▶' : '▼'}
+      </span>
+
+      {/* Color dot */}
+      <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+
+      {/* Account name — clicking toggles collapse */}
+      <div onClick={onToggle} style={{ flex: 1, overflow: 'hidden', cursor: 'pointer' }}>
+        <div style={{
+          fontSize: 11, fontWeight: 700, color: 'var(--text-primary)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {acct.email === 'local' ? 'Local Import' : acct.email.split('@')[0]}
+        </div>
+        {acct.email !== 'local' && (
+          <div style={{
+            fontSize: 9, color: 'var(--text-muted)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {acct.email}
+          </div>
+        )}
+      </div>
+
+      {/* Per-account action buttons — always visible for Gmail accounts */}
+      {acct.id !== 'local' && (
+        <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+          {onSync && (
+            <button
+              onClick={e => { e.stopPropagation(); onSync(); }}
+              title="Sync this account"
+              style={{
+                background: 'none', border: '1px solid var(--border)',
+                color: 'var(--text-muted)', cursor: 'pointer',
+                fontSize: 10, padding: '2px 6px', fontFamily: 'inherit',
+                lineHeight: 1,
+              }}
+            >⟳</button>
+          )}
+          {onEdit && (
+            <button
+              onClick={e => { e.stopPropagation(); onEdit(); }}
+              title="Edit / remove account"
+              style={{
+                background: 'none', border: '1px solid var(--border)',
+                color: 'var(--text-muted)', cursor: 'pointer',
+                fontSize: 10, padding: '2px 6px', fontFamily: 'inherit',
+                lineHeight: 1,
+              }}
+            >✎</button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

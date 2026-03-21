@@ -154,23 +154,54 @@ export default function SettingsPanel({ isOpen, onClose, theme, onThemeChange, v
                 <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
                   Stormbird
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 2 }}>
                   v{version} — USB-portable email archiver
                 </div>
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>
+                  A <span
+                    onClick={() => window.sb?.shell.openExternal('https://whitecoatfoundry.com')}
+                    style={{ color: 'var(--text-accent)', cursor: 'pointer' }}
+                  >White Coat Foundry</span> product by Dr Vishal Raut
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
                   <LinkBtn onClick={() => window.sb?.shell.openExternal('https://github.com/drvishalraut-eng/stormbird')}>
                     GitHub →
                   </LinkBtn>
+                  <LinkBtn onClick={() => window.sb?.shell.openExternal('https://drvishalraut-eng.github.io/Stormbird/')}>
+                    Website →
+                  </LinkBtn>
+                  <LinkBtn onClick={() => window.sb?.shell.openExternal('https://github.com/drvishalraut-eng/stormbird/releases')}>
+                    Releases →
+                  </LinkBtn>
+                  <LinkBtn onClick={() => window.sb?.shell.openExternal('https://github.com/drvishalraut-eng/stormbird/issues')}>
+                    Issues →
+                  </LinkBtn>
+                  <LinkBtn
+                    onClick={() => window.sb?.shell.openExternal('https://buymeacoffee.com/drvishalraut')}
+                    highlight
+                  >
+                    ☕ Buy me a coffee
+                  </LinkBtn>
+                </div>
+
+                <div style={{
+                  margin: '16px 0 0', padding: '12px 16px',
+                  background: 'var(--accent-dim)', border: '1px solid var(--border-accent)',
+                  fontSize: 11, color: 'var(--text-second)', lineHeight: 1.7, textAlign: 'center',
+                }}>
+                  Stormbird is free to use. If it saves you time or protects your email,
+                  consider buying a coffee — it keeps the project alive. ☕
                 </div>
               </div>
 
               <Section title="Build">
                 {[
                   ['Version',   version],
-                  ['Runtime',   `Electron 29 + React 18`],
-                  ['Storage',   'SQLite (sql.js WASM) + .eml files'],
-                  ['Protocol',  'Raw IMAP over TLS (no packages)'],
+                  ['Runtime',   'Electron 29 + React 18 + Vite 5'],
+                  ['Database',  'SQLite via sql.js (WASM)'],
+                  ['IMAP',      'Raw Node.js TLS — no external packages'],
                   ['SMTP',      'nodemailer, port 587 STARTTLS'],
+                  ['Platforms', 'Windows 10/11 x64 · macOS 10.15+'],
                 ].map(([k, v]) => (
                   <div key={k} style={{
                     display: 'flex', padding: '6px 0',
@@ -182,10 +213,29 @@ export default function SettingsPanel({ isOpen, onClose, theme, onThemeChange, v
                 ))}
               </Section>
 
+              <Section title="Credits">
+                <div style={{ fontSize: 12, color: 'var(--text-second)', lineHeight: 1.8 }}>
+                  <div><strong style={{ color: 'var(--text-primary)' }}>Dr Vishal Raut</strong> — Developer &amp; Product</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Paediatrician · Maharashtra, India</div>
+                  <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+                    <span
+                      onClick={() => window.sb?.shell.openExternal('https://github.com/drvishalraut-eng')}
+                      style={{ color: 'var(--text-accent)', cursor: 'pointer' }}
+                    >github.com/drvishalraut-eng</span>
+                  </div>
+                </div>
+              </Section>
+
               <Section title="License">
                 <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
-                  Private — all rights reserved.<br />
-                  Built by Dr Vishal Raut. Not for redistribution.
+                  MIT License — free to use, modify, and distribute.<br />
+                  © 2026 Dr Vishal Raut / White Coat Foundry.<br />
+                  <span
+                    onClick={() => window.sb?.shell.openExternal('https://github.com/drvishalraut-eng/stormbird/blob/main/LICENSE')}
+                    style={{ color: 'var(--text-accent)', cursor: 'pointer' }}
+                  >
+                    View full license on GitHub →
+                  </span>
                 </p>
               </Section>
             </div>
@@ -233,16 +283,20 @@ function Row({ label, children }) {
   );
 }
 
-function LinkBtn({ children, onClick }) {
+function LinkBtn({ children, onClick, highlight }) {
   const [h, setH] = useState(false);
   return (
     <button onClick={onClick}
       onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
       style={{
         padding: '5px 14px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
-        background: h ? 'var(--accent-dim)' : 'none',
-        border: '1px solid var(--border-accent)',
-        color: 'var(--text-accent)',
+        background: highlight
+          ? (h ? '#d97706' : '#f59e0b')
+          : (h ? 'var(--accent-dim)' : 'none'),
+        border: `1px solid ${highlight ? '#f59e0b' : 'var(--border-accent)'}`,
+        color: highlight ? '#000' : 'var(--text-accent)',
+        fontWeight: highlight ? 700 : 400,
+        transition: 'background 0.15s',
       }}>{children}</button>
   );
 }

@@ -6,8 +6,41 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs   = require('fs');
 
+// ── Config file — persists user-chosen data directory ─────────────────────────
+// Stored next to the executable so it travels with the USB drive.
+
+function getConfigPath() {
+  return path.join(path.dirname(process.execPath), 'stormbird-config.json');
+}
+
+function readConfig() {
+  try {
+    const p = getConfigPath();
+    if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch (_) {}
+  return {};
+}
+
+function writeConfig(obj) {
+  try {
+    const existing = readConfig();
+    fs.writeFileSync(getConfigPath(), JSON.stringify({ ...existing, ...obj }, null, 2), 'utf8');
+    return true;
+  } catch (_) { return false; }
+}
+
 function getDataDir() {
+  // 1. User-configured path (set via setup wizard or settings)
+  const config = readConfig();
+  if (config.dataDir && config.dataDir.trim()) {
+    return config.dataDir.trim();
+  }
+  // 2. Default — next to the executable
   if (app.isPackaged) {
+    if (process.platform === 'darwin') {
+      // .app/Contents/MacOS/Stormbird → go up 3 levels to folder containing .app
+      return path.join(path.dirname(process.execPath), '..', '..', '..', 'Stormbird-Data');
+    }
     return path.join(path.dirname(process.execPath), 'Stormbird-Data');
   }
   return path.join(__dirname, '..', 'Stormbird-Data');
@@ -105,4 +138,4 @@ function _getVersion() {
   try { return require('../package.json').version; } catch (_) { return '?'; }
 }
 
-module.exports = { getDataDir, DATA_DIR };
+module.exports = { getDataDir, DATA_DIR, readConfig, writeConfig };

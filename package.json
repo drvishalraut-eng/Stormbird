@@ -1,6 +1,6 @@
 {
   "name": "stormbird",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "USB-portable email archiver with backup and AI-assisted issue resolution",
   "main": "electron/main.js",
   "author": "drvishalraut-eng",
@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build",
-    "package": "npm run build && electron-packager . Stormbird --platform=win32 --arch=x64 --out=dist-win --overwrite --no-asar --icon=build-assets/icon.ico --prune=true --ignore=src --ignore=\\.git --ignore=dist-win --ignore=\\.gitignore"
+    "package": "npm run build && electron-packager . Stormbird --platform=win32 --arch=x64 --out=dist-win --overwrite --no-asar --icon=build-assets/icon.ico --prune=true --ignore=src --ignore=\\.git --ignore=dist-win --ignore=\\.gitignore",
+    "build:mac": "vite build && npx electron-packager . Stormbird --platform=darwin --arch=x64 --out=dist-mac --overwrite --no-asar --prune=true --ignore=src --ignore=dist-mac --ignore=dist-win",
+    "build:win": "vite build && npx electron-packager . Stormbird --platform=win32 --arch=x64 --out=dist-win --overwrite --no-asar --icon=build-assets/icon.ico --prune=true --ignore=src --ignore=dist-win"
   },
   "dependencies": {
     "nodemailer": "^6.9.13",

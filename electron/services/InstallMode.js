@@ -1,42 +1,35 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// services/InstallMode.js — Detect Stormbird install mode
+// services/InstallMode.js — Detect Stormbird install mode (cross-platform)
 //
 // THREE MODES:
-//   portable  — Stormbird.exe AND Stormbird-Data are both on a removable drive
+//   portable  — exe AND data both on a removable drive
 //               Safe eject will kill the running process. Warn user.
 //
-//   data-only — Stormbird.exe is on a fixed drive, Stormbird-Data is on USB.
-//               Safe eject is safe — app keeps running after data drive removed.
-//               (Standard "USB as archive drive" setup)
+//   data-only — exe on fixed drive, data on removable drive
+//               Safe eject is safe — app keeps running.
 //
-//   fixed     — Everything is on a fixed drive. No removable drive involved.
-//               Safe eject not applicable.
+//   fixed     — Everything on fixed drives. No removable drive involved.
 //
-// Detection method: compare drive letters of process.execPath and dataDir,
-// then check Win32_LogicalDisk DriveType (2 = removable) via PowerShell.
-// Falls back to path heuristics on non-Windows.
+// Windows: checks Win32_LogicalDisk DriveType via PowerShell
+// macOS:   checks /Volumes mounts via diskutil
 // ─────────────────────────────────────────────────────────────────────────────
 
 const { exec } = require('child_process');
 const path     = require('path');
+const fs       = require('fs');
 const logger   = require('../logger');
 
-let _mode    = 'unknown';
+let _mode      = 'unknown';
 let _exeDrive  = null;
 let _dataDrive = null;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-/**
- * Detect install mode. Call once on startup.
- * @param {string} dataDir  — path to Stormbird-Data
- * @returns {Promise<'portable'|'data-only'|'fixed'|'unknown'>}
- */
 async function detect(dataDir) {
-  _exeDrive  = _driveLetterFrom(process.execPath);
-  _dataDrive = _driveLetterFrom(dataDir);
+  _exeDrive  = _driveFromPath(process.execPath);
+  _dataDrive = _driveFromPath(dataDir);
 
-  logger.log('BOOT', `Exe drive: ${_exeDrive || '?'}  Data drive: ${_dataDrive || '?'}`);
+  logger.log('BOOT', `InstallMode — exe: ${_exeDrive || '?'}  data: ${_dataDrive || '?'}`);
 
   if (!_exeDrive || !_dataDrive) {
     _mode = 'unknown';
@@ -45,18 +38,15 @@ async function detect(dataDir) {
 
   try {
     const removable = await _getRemovableDrives();
-    const exeRemovable  = removable.includes(_exeDrive.toUpperCase());
-    const dataRemovable = removable.includes(_dataDrive.toUpperCase());
+    const exeRemovable  = removable.some(r => _driveMatch(r, _exeDrive));
+    const dataRemovable = removable.some(r => _driveMatch(r, _dataDrive));
 
-    if (exeRemovable && dataRemovable) {
-      _mode = 'portable';
-    } else if (!exeRemovable && dataRemovable) {
-      _mode = 'data-only';
-    } else {
-      _mode = 'fixed';
-    }
+    if (exeRemovable && dataRemovable)  _mode = 'portable';
+    else if (!exeRemovable && dataRemovable) _mode = 'data-only';
+    else _mode = 'fixed';
+
   } catch (_) {
-    // Fallback: guess from same drive letter
+    // Fallback heuristic
     _mode = _exeDrive === _dataDrive ? 'portable' : 'data-only';
   }
 
@@ -64,67 +54,85 @@ async function detect(dataDir) {
   return _mode;
 }
 
-/**
- * Get the detected mode.
- */
-function getMode() {
-  return _mode;
-}
+function getMode()        { return _mode; }
+function getDrives()      { return { exeDrive: _exeDrive, dataDrive: _dataDrive }; }
 
-/**
- * Get the drive letters.
- */
-function getDrives() {
-  return { exeDrive: _exeDrive, dataDrive: _dataDrive };
-}
-
-/**
- * Returns true if safe eject will kill the running process.
- * Only true in portable mode when ejecting the exe drive.
- */
 function ejectWillKillApp(targetDrive) {
   if (_mode !== 'portable') return false;
   if (!targetDrive || !_exeDrive) return false;
-  return targetDrive.toUpperCase().startsWith(_exeDrive.toUpperCase());
+  return _driveMatch(_exeDrive, targetDrive);
 }
 
-/**
- * Returns a human-readable mode description for display.
- */
 function getModeDescription() {
   switch (_mode) {
     case 'portable' :
-      return 'Portable — exe and data both on USB. Ejecting will close Stormbird.';
+      return 'Portable — exe and data both on removable drive. Ejecting will close Stormbird.';
     case 'data-only':
-      return 'Data on USB — exe installed on this PC. Safe to eject data drive.';
+      return 'Data on removable drive — exe installed on this machine. Safe to eject data drive.';
     case 'fixed'    :
-      return 'Fixed install — data stored on this PC.';
+      return 'Fixed install — data stored on this machine\'s internal drive.';
     default:
-      return 'Install mode unknown.';
+      return 'Install mode could not be determined.';
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Platform helpers ──────────────────────────────────────────────────────────
 
-function _driveLetterFrom(p) {
+function _driveFromPath(p) {
   if (!p) return null;
-  const m = p.match(/^([A-Za-z]):/);
-  return m ? m[1].toUpperCase() + ':' : null;
+  if (process.platform === 'win32') {
+    const m = p.match(/^([A-Za-z]):/);
+    return m ? m[1].toUpperCase() + ':' : null;
+  }
+  // macOS / Linux: match /Volumes/xxx or just /
+  const m = p.match(/^(\/Volumes\/[^/]+)/);
+  return m ? m[1] : '/';
 }
 
-function _getRemovableDrives() {
-  if (process.platform !== 'win32') {
-    return Promise.resolve([]); // Non-Windows: assume fixed
-  }
+function _driveMatch(a, b) {
+  if (!a || !b) return false;
+  return a.toLowerCase() === b.toLowerCase();
+}
 
+async function _getRemovableDrives() {
+  if (process.platform === 'win32') return _windowsRemovable();
+  if (process.platform === 'darwin') return _macRemovable();
+  return [];
+}
+
+function _windowsRemovable() {
   return new Promise((resolve) => {
     const ps = `Get-WmiObject Win32_LogicalDisk | Where-Object {$_.DriveType -eq 2} | Select-Object -ExpandProperty DeviceID`;
     exec(`powershell -Command "${ps}"`, (err, stdout) => {
       if (err || !stdout.trim()) { resolve([]); return; }
-      const drives = stdout.trim().split('\n')
-        .map(d => d.trim().toUpperCase())
-        .filter(Boolean);
-      resolve(drives);
+      resolve(stdout.trim().split('\n').map(d => d.trim()).filter(Boolean));
+    });
+  });
+}
+
+function _macRemovable() {
+  return new Promise((resolve) => {
+    // List external volumes via diskutil
+    exec('diskutil list -plist external', (err) => {
+      if (err) {
+        // Fallback: all /Volumes entries except Macintosh HD are likely removable
+        fs.readdir('/Volumes', (e, entries) => {
+          if (e) { resolve([]); return; }
+          resolve(entries
+            .filter(v => !v.startsWith('.') && v !== 'Macintosh HD')
+            .map(v => `/Volumes/${v}`)
+          );
+        });
+        return;
+      }
+      // Same fallback — diskutil -plist is complex to parse without plist module
+      fs.readdir('/Volumes', (e, entries) => {
+        if (e) { resolve([]); return; }
+        resolve(entries
+          .filter(v => !v.startsWith('.') && v !== 'Macintosh HD')
+          .map(v => `/Volumes/${v}`)
+        );
+      });
     });
   });
 }

@@ -129,6 +129,8 @@ contextBridge.exposeInMainWorld('sb', {
     installMode  : ()           => ipcRenderer.invoke('app:installMode'),
     ejectWillKill: (drive)      => ipcRenderer.invoke('app:ejectWillKillApp', drive),
     isFirstRun   : ()           => ipcRenderer.invoke('app:isFirstRun'),
+    setDataDir   : (dir)        => ipcRenderer.invoke('app:setDataDir', dir),
+    getConfig    : ()           => ipcRenderer.invoke('app:getConfig'),
   },
 
   // ── NAS Backup ────────────────────────────────────────────────────────────

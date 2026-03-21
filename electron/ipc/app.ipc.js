@@ -9,7 +9,40 @@ const MessageStore    = require('../services/MessageStore');
 const NasBackup       = require('../services/NasBackup');
 const InstallMode     = require('../services/InstallMode');
 
+// Access the config helpers from main.js
+const mainModule = require('../main');
+
 function register(ipcMain, mainWindow) {
+
+  // ── Data directory config ───────────────────────────────────────────────────
+
+  /**
+   * Save a new dataDir to stormbird-config.json and relaunch the app.
+   * Called by the setup wizard when the user picks a custom data folder.
+   */
+  ipcMain.handle('app:setDataDir', async (_, newDataDir) => {
+    if (!newDataDir || !newDataDir.trim()) {
+      return { success: false, error: 'No path provided' };
+    }
+    logger.log('BOOT', `Saving dataDir: ${newDataDir}`);
+    try {
+      const written = mainModule.writeConfig({ dataDir: newDataDir.trim() });
+      if (!written) return { success: false, error: 'Could not write config file' };
+      // Relaunch so the new dataDir takes effect
+      app.relaunch();
+      app.exit(0);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  /**
+   * Read the current config (so wizard can show existing dataDir).
+   */
+  ipcMain.handle('app:getConfig', () => {
+    return mainModule.readConfig();
+  });
 
   // ── Process control ─────────────────────────────────────────────────────────
 
