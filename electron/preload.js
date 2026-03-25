@@ -60,13 +60,15 @@ contextBridge.exposeInMainWorld('sb', {
 
   // ── Messages ─────────────────────────────────────────────────────────────
   messages: {
-    folders : (accountId)    => ipcRenderer.invoke('messages:folders', accountId),
-    list    : (query)        => ipcRenderer.invoke('messages:list', query),
-    get     : (id)           => ipcRenderer.invoke('messages:get', id),
-    search  : (query)        => ipcRenderer.invoke('messages:search', query),
-    mark    : (id, flags)    => ipcRenderer.invoke('messages:mark', id, flags),
-    delete  : (id)           => ipcRenderer.invoke('messages:delete', id),
-    counts  : (accountId)    => ipcRenderer.invoke('messages:counts', accountId),
+    folders      : (accountId)    => ipcRenderer.invoke('messages:folders', accountId),
+    list         : (query)        => ipcRenderer.invoke('messages:list', query),
+    get          : (id)           => ipcRenderer.invoke('messages:get', id),
+    search       : (query)        => ipcRenderer.invoke('messages:search', query),
+    globalSearch : (q, limit)     => ipcRenderer.invoke('messages:globalSearch', q, limit),
+    allCounts    : ()             => ipcRenderer.invoke('messages:allCounts'),
+    mark         : (id, flags)    => ipcRenderer.invoke('messages:mark', id, flags),
+    delete       : (id)           => ipcRenderer.invoke('messages:delete', id),
+    counts       : (accountId)    => ipcRenderer.invoke('messages:counts', accountId),
   },
 
   // ── Sync ─────────────────────────────────────────────────────────────────
@@ -94,21 +96,52 @@ contextBridge.exposeInMainWorld('sb', {
     },
   },
 
-  // ── Mail send ────────────────────────────────────────────────────────────
+  // ── Mail send / outbox / drafts ───────────────────────────────────────────
   mail: {
-    send    : (accountId, message) => ipcRenderer.invoke('mail:send', accountId, message),
-    outbox  : ()                   => ipcRenderer.invoke('mail:outbox'),
-    retry   : (id)                 => ipcRenderer.invoke('mail:retry', id),
+    send        : (msg)     => ipcRenderer.invoke('mail:send', msg),
+    outbox      : ()        => ipcRenderer.invoke('mail:outbox'),
+    outboxCount : ()        => ipcRenderer.invoke('mail:outboxCount'),
+    retry       : (id)      => ipcRenderer.invoke('mail:retry', id),
+    deleteOutbox: (id)      => ipcRenderer.invoke('mail:deleteOutbox', id),
+    flushQueue  : ()        => ipcRenderer.invoke('mail:flushQueue'),
+    saveDraft   : (draft)   => ipcRenderer.invoke('mail:saveDraft', draft),
+    listDrafts  : ()        => ipcRenderer.invoke('mail:listDrafts'),
+    deleteDraft : (id)      => ipcRenderer.invoke('mail:deleteDraft', id),
+    testSmtp    : (config)  => ipcRenderer.invoke('mail:testSmtp', config),
+    onUpdate    : (callback) => {
+      ipcRenderer.on('outbox:update', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('outbox:update');
+    },
   },
 
-  // ── Backup ───────────────────────────────────────────────────────────────
+  // ── Network status ────────────────────────────────────────────────────────
+  net: {
+    onStatus: (callback) => {
+      ipcRenderer.on('net:status', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('net:status');
+    },
+  },
+
+  // ── App controls ──────────────────────────────────────────────────────────
+  appControl: {
+    stopAll      : ()           => ipcRenderer.invoke('app:stopAll'),
+    stopAndExit  : ()           => ipcRenderer.invoke('app:stopAndExit'),
+    installMode  : ()           => ipcRenderer.invoke('app:installMode'),
+    ejectWillKill: (drive)      => ipcRenderer.invoke('app:ejectWillKillApp', drive),
+    isFirstRun   : ()           => ipcRenderer.invoke('app:isFirstRun'),
+    setDataDir   : (dir)        => ipcRenderer.invoke('app:setDataDir', dir),
+    getConfig    : ()           => ipcRenderer.invoke('app:getConfig'),
+  },
+
+  // ── NAS Backup ────────────────────────────────────────────────────────────
   backup: {
-    runFull        : (dest, compression) => ipcRenderer.invoke('backup:runFull', dest, compression),
-    runIncremental : (dest, compression) => ipcRenderer.invoke('backup:runIncremental', dest, compression),
-    listSnapshots  : (path)              => ipcRenderer.invoke('backup:listSnapshots', path),
-    restore        : (snapshotPath)      => ipcRenderer.invoke('backup:restore', snapshotPath),
-    log            : ()                  => ipcRenderer.invoke('backup:log'),
-    onProgress     : (callback)          => {
+    runFull        : (nasPath)          => ipcRenderer.invoke('backup:runFull', nasPath),
+    runIncremental : (nasPath)          => ipcRenderer.invoke('backup:runIncremental', nasPath),
+    setSchedule    : (schedule, path)   => ipcRenderer.invoke('backup:setSchedule', schedule, path),
+    getSchedule    : ()                 => ipcRenderer.invoke('backup:getSchedule'),
+    getStatus      : ()                 => ipcRenderer.invoke('backup:getStatus'),
+    browsePath     : ()                 => ipcRenderer.invoke('backup:browsePath'),
+    onProgress     : (callback)         => {
       ipcRenderer.on('backup:progress', (_, data) => callback(data));
       return () => ipcRenderer.removeAllListeners('backup:progress');
     },
@@ -118,22 +151,28 @@ contextBridge.exposeInMainWorld('sb', {
   drive: {
     listRemovable : ()         => ipcRenderer.invoke('drive:listRemovable'),
     getHealth     : ()         => ipcRenderer.invoke('drive:getHealth'),
-    format        : (driveLetter) => ipcRenderer.invoke('drive:format', driveLetter),
-    safeEject     : ()         => ipcRenderer.invoke('drive:safeEject'),
-    onHealth      : (callback) => {
-      ipcRenderer.on('drive:health', (_, data) => callback(data));
-      return () => ipcRenderer.removeAllListeners('drive:health');
+    safeEject     : (letter)   => ipcRenderer.invoke('drive:safeEject', letter),
+    onEjected     : (callback) => {
+      ipcRenderer.on('drive:ejected', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('drive:ejected');
     },
   },
 
   // ── Integrity ────────────────────────────────────────────────────────────
   integrity: {
-    spotCheck : ()          => ipcRenderer.invoke('integrity:spotCheck'),
-    deepScan  : ()          => ipcRenderer.invoke('integrity:deepScan'),
-    getReport : ()          => ipcRenderer.invoke('integrity:getReport'),
-    onProgress: (callback)  => {
+    spotCheck      : ()         => ipcRenderer.invoke('integrity:spotCheck'),
+    deepScan       : ()         => ipcRenderer.invoke('integrity:deepScan'),
+    writeManifests : ()         => ipcRenderer.invoke('integrity:writeManifests'),
+    takeSnapshot   : ()         => ipcRenderer.invoke('integrity:takeSnapshot'),
+    listSnapshots  : ()         => ipcRenderer.invoke('integrity:listSnapshots'),
+    getReport      : ()         => ipcRenderer.invoke('integrity:getReport'),
+    onProgress     : (callback) => {
       ipcRenderer.on('integrity:progress', (_, data) => callback(data));
       return () => ipcRenderer.removeAllListeners('integrity:progress');
+    },
+    onReport       : (callback) => {
+      ipcRenderer.on('integrity:report', (_, data) => callback(data));
+      return () => ipcRenderer.removeAllListeners('integrity:report');
     },
   },
 

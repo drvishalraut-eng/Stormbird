@@ -1,6 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// ipc/index.js — Registers all IPC handlers with the main process
-// Each domain has its own file. This just wires them together.
+// ipc/index.js — Registers all IPC handlers
 // ─────────────────────────────────────────────────────────────────────────────
 
 const { shell, app } = require('electron');
@@ -11,26 +10,25 @@ const ProcessManager = require('../ProcessManager');
 function registerIpc(ipcMain, dataDir, mainWindow) {
 
   // ── Window controls ──────────────────────────────────────────────────────
-  ipcMain.handle('win:minimize',   () => mainWindow.minimize());
-  ipcMain.handle('win:maximize',   () => {
+  ipcMain.handle('win:minimize',    () => mainWindow.minimize());
+  ipcMain.handle('win:maximize',    () => {
     if (mainWindow.isMaximized()) mainWindow.unmaximize();
     else mainWindow.maximize();
   });
-  ipcMain.handle('win:close',      () => mainWindow.close());
-  ipcMain.handle('win:isMaximized',() => mainWindow.isMaximized());
+  ipcMain.handle('win:close',       () => mainWindow.close());
+  ipcMain.handle('win:isMaximized', () => mainWindow.isMaximized());
 
   // ── Logger ───────────────────────────────────────────────────────────────
   ipcMain.handle('logger:getRecent', (_, n) => logger.getRecent(n));
 
   // ── Process Manager ──────────────────────────────────────────────────────
-  ipcMain.handle('process:getAll',   ()         => ProcessManager.getAll());
-  ipcMain.handle('process:diagnose', (_, id)    => ProcessManager.diagnoseIssue(id));
-  ipcMain.handle('process:resolve',  (_, id)    => ProcessManager.resolveIssue(id));
-  ipcMain.handle('process:retry',    (_, name)  => {
-    logger.log('MANAGER', `Manual retry requested for: ${name}`);
+  ipcMain.handle('process:getAll',   ()        => ProcessManager.getAll());
+  ipcMain.handle('process:diagnose', (_, id)   => ProcessManager.diagnoseIssue(id));
+  ipcMain.handle('process:resolve',  (_, id)   => ProcessManager.resolveIssue(id));
+  ipcMain.handle('process:retry',    (_, name) => {
     const entry = ProcessManager.getProcess(name);
     if (entry && entry.restartFn) {
-      entry.restartFn().catch(err => logger.error('MANAGER', `Manual retry failed for ${name}`, err));
+      entry.restartFn().catch(err => logger.error('MANAGER', `Retry failed for ${name}`, err));
     }
   });
 
@@ -42,7 +40,6 @@ function registerIpc(ipcMain, dataDir, mainWindow) {
 
   // ── Dialog helpers ────────────────────────────────────────────────────────
   const { dialog } = require('electron');
-
   ipcMain.handle('dialog:openFile', (_, options) =>
     dialog.showOpenDialog(mainWindow, { properties: ['openFile'], ...options })
   );
@@ -54,12 +51,12 @@ function registerIpc(ipcMain, dataDir, mainWindow) {
   );
 
   // ── Shell ────────────────────────────────────────────────────────────────
-  ipcMain.handle('shell:openPath',     (_, filePath) => shell.openPath(filePath));
-  ipcMain.handle('shell:openExternal', (_, url)      => shell.openExternal(url));
+  ipcMain.handle('shell:openPath',     (_, p)   => shell.openPath(p));
+  ipcMain.handle('shell:openExternal', (_, url) => shell.openExternal(url));
 
-  // ── Settings (simple JSON file) ───────────────────────────────────────────
-  const settingsPath = path.join(dataDir, 'settings.json');
+  // ── Settings ──────────────────────────────────────────────────────────────
   const fs           = require('fs');
+  const settingsPath = path.join(dataDir, 'settings.json');
 
   function readSettings() {
     try {
@@ -71,58 +68,69 @@ function registerIpc(ipcMain, dataDir, mainWindow) {
     fs.writeFileSync(settingsPath, JSON.stringify(data, null, 2), 'utf8');
   }
 
-  ipcMain.handle('settings:getAll', ()           => readSettings());
-  ipcMain.handle('settings:get',    (_, key)     => readSettings()[key]);
+  ipcMain.handle('settings:getAll', ()            => readSettings());
+  ipcMain.handle('settings:get',    (_, key)      => readSettings()[key]);
   ipcMain.handle('settings:set',    (_, key, val) => {
-    const s = readSettings();
-    s[key]  = val;
-    writeSettings(s);
-    logger.log('INFO', `Setting updated: ${key}`);
+    const s = readSettings(); s[key] = val; writeSettings(s);
     return true;
   });
 
-  // ── Stub handlers for future phases ──────────────────────────────────────
-  // These return empty/default responses so the UI doesn't crash in Phase 0.
-  // Each will be replaced in the appropriate phase.
+  // ── Domain IPC modules ────────────────────────────────────────────────────
+  require('./messages.ipc').register(ipcMain, dataDir);
+  require('./importer.ipc').register(ipcMain, dataDir, mainWindow);
+  require('./accounts.ipc').register(ipcMain);
+  require('./sync.ipc').register(ipcMain, dataDir, mainWindow);
+  require('./mail.ipc').register(ipcMain);
+  require('./integrity.ipc').register(ipcMain);
+  require('./app.ipc').register(ipcMain, mainWindow);
 
-  const stub = (name) => ipcMain.handle(name, () => {
-    logger.log('INFO', `Stub IPC called: ${name} — not yet implemented`);
-    return null;
+  // ── Initialize services ───────────────────────────────────────────────────
+  const SyncService          = require('../services/SyncService');
+  const SmtpService          = require('../services/SmtpService');
+  const ConnectivityWatcher  = require('../services/ConnectivityWatcher');
+  const IntegrityScanner     = require('../services/IntegrityScanner');
+  const DriveManager         = require('../services/DriveManager');
+  const NasBackup            = require('../services/NasBackup');
+  const InstallMode          = require('../services/InstallMode');
+
+  SyncService.init(mainWindow);
+  SmtpService.init(mainWindow, dataDir);
+  IntegrityScanner.init(mainWindow, dataDir);
+  DriveManager.init(mainWindow, dataDir);
+  NasBackup.init(mainWindow, dataDir);
+
+  // Detect install mode (portable vs data-only vs fixed) — async, non-blocking
+  InstallMode.detect(dataDir).then(mode => {
+    logger.log('BOOT', `Install mode detected: ${mode}`);
   });
 
-  stub('accounts:list');
-  stub('accounts:add');
-  stub('accounts:update');
-  stub('accounts:remove');
-  stub('accounts:testImap');
-  stub('accounts:testSmtp');
-  stub('messages:folders');
-  stub('messages:list');
-  stub('messages:get');
-  stub('messages:search');
-  stub('messages:mark');
-  stub('messages:delete');
-  stub('messages:counts');
-  stub('sync:run');
-  stub('sync:runAll');
-  stub('sync:status');
-  stub('importer:importMbox');
-  stub('importer:status');
-  stub('mail:send');
-  stub('mail:outbox');
-  stub('mail:retry');
-  stub('backup:runFull');
-  stub('backup:runIncremental');
+  // Start connectivity watcher
+  ConnectivityWatcher.start({
+    window     : mainWindow,
+    onReconnect: () => SmtpService.flushQueue(),
+    onChange   : (online) => {
+      logger.log('NET', `Network is now ${online ? 'online' : 'offline'}`);
+    },
+  });
+
+  // Register stopFn so ProcessManager.stopAll() can shut it down
+  const ProcessManager = require('../ProcessManager');
+  ProcessManager.register('ConnectivityWatcher', {
+    restartable: false,
+    stopFn     : () => ConnectivityWatcher.stop(),
+  });
+  ProcessManager.idle('ConnectivityWatcher', 'Watching network');
+
+  // ── Stub handlers for future phases ──────────────────────────────────────
+  const stub = (name) => {
+    try { ipcMain.handle(name, () => null); } catch (_) {}
+  };
+
   stub('backup:listSnapshots');
   stub('backup:restore');
   stub('backup:log');
-  stub('drive:listRemovable');
-  stub('drive:getHealth');
   stub('drive:format');
-  stub('drive:safeEject');
-  stub('integrity:spotCheck');
-  stub('integrity:deepScan');
-  stub('integrity:getReport');
+  stub('sync:stop');
 
   logger.log('BOOT', 'All IPC handlers registered');
 }

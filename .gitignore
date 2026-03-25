@@ -9,3 +9,4 @@ build-assets/generated/
 Stormbird-error.log
 .DS_Store
 Thumbs.db
+dist-mac/
